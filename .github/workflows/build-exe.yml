@@ -1,0 +1,53 @@
+name: Build Windows EXE
+
+# Every push to master builds SpinTheWheel.exe and publishes it as a new GitHub
+# Release, so the newest .exe is always at:
+#   https://github.com/<owner>/<repo>/releases/latest/download/SpinTheWheel.exe
+on:
+  push:
+    branches: [master]
+    paths:
+      - "main.py"
+      - "assets/**"
+      - "requirements.txt"
+      - ".github/workflows/build-exe.yml"
+  workflow_dispatch:   # also allows a manual "Run workflow" button on GitHub
+
+permissions:
+  contents: write      # needed to create the release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build exe
+        run: >
+          pyinstaller --noconfirm --onefile --windowed
+          --name SpinTheWheel
+          --collect-data customtkinter
+          --add-data "assets;assets"
+          main.py
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Spin the Wheel v1.0.${{ github.run_number }}
+          make_latest: true
+          body: |
+            Download **SpinTheWheel.exe** below and double-click to run — no Python needed.
+
+            If Windows shows "Windows protected your PC", click **More info → Run anyway**
+            (the app isn't code-signed).
+          files: dist/SpinTheWheel.exe
